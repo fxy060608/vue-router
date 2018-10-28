@@ -1,6 +1,8 @@
 /* @flow */
 
-import { warn } from './warn'
+import {
+  warn
+} from './warn'
 
 const encodeReserveRE = /[!'()*]/g
 const encodeReserveReplacer = c => '%' + c.charCodeAt(0).toString(16)
@@ -16,9 +18,9 @@ const encode = str => encodeURIComponent(str)
 const decode = decodeURIComponent
 
 export function resolveQuery (
-  query: ?string,
+  query: ? string,
   extraQuery: Dictionary<string> = {},
-  _parseQuery: ?Function
+  _parseQuery: ? Function
 ): Dictionary<string> {
   const parse = _parseQuery || parseQuery
   let parsedQuery
@@ -30,6 +32,10 @@ export function resolveQuery (
   }
   for (const key in extraQuery) {
     parsedQuery[key] = extraQuery[key]
+  }
+  // fixed by xxxxxx
+  if (parsedQuery.__id__) {
+    parsedQuery.__id__ = parseInt(parsedQuery.__id__)
   }
   return parsedQuery
 }

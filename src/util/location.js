@@ -1,19 +1,32 @@
 /* @flow */
 
 import type VueRouter from '../index'
-import { parsePath, resolvePath } from './path'
-import { resolveQuery } from './query'
-import { fillParams } from './params'
-import { warn } from './warn'
-import { extend } from './misc'
+import {
+  parsePath,
+  resolvePath
+} from './path'
+import {
+  resolveQuery
+} from './query'
+import {
+  fillParams
+} from './params'
+import {
+  warn
+} from './warn'
+import {
+  extend
+} from './misc'
 
 export function normalizeLocation (
   raw: RawLocation,
-  current: ?Route,
-  append: ?boolean,
-  router: ?VueRouter
+  current: ? Route,
+  append: ? boolean,
+  router: ? VueRouter
 ): Location {
-  let next: Location = typeof raw === 'string' ? { path: raw } : raw
+  let next: Location = typeof raw === 'string' ? {
+    path: raw
+  } : raw
   // named target
   if (next.name || next._normalized) {
     return next
@@ -55,6 +68,7 @@ export function normalizeLocation (
 
   return {
     _normalized: true,
+    type: next.type,
     path,
     query,
     hash

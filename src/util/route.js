@@ -1,15 +1,17 @@
 /* @flow */
 
 import type VueRouter from '../index'
-import { stringifyQuery } from './query'
+import {
+  stringifyQuery
+} from './query'
 
 const trailingSlashRE = /\/?$/
 
 export function createRoute (
-  record: ?RouteRecord,
+  record: ? RouteRecord,
   location: Location,
-  redirectedFrom?: ?Location,
-  router?: VueRouter
+  redirectedFrom ?: ? Location,
+  router ?: VueRouter
 ): Route {
   const stringifyQuery = router && router.options.stringifyQuery
 
@@ -23,6 +25,7 @@ export function createRoute (
     meta: (record && record.meta) || {},
     path: location.path || '/',
     hash: location.hash || '',
+    type: location.type,
     query,
     params: location.params || {},
     fullPath: getFullPath(location, stringifyQuery),
@@ -53,7 +56,7 @@ export const START = createRoute(null, {
   path: '/'
 })
 
-function formatMatch (record: ?RouteRecord): Array<RouteRecord> {
+function formatMatch (record: ? RouteRecord): Array<RouteRecord> {
   const res = []
   while (record) {
     res.unshift(record)
@@ -62,15 +65,18 @@ function formatMatch (record: ?RouteRecord): Array<RouteRecord> {
   return res
 }
 
-function getFullPath (
-  { path, query = {}, hash = '' },
-  _stringifyQuery
+function getFullPath ({
+  path,
+  query = {},
+  hash = ''
+},
+_stringifyQuery
 ): string {
   const stringify = _stringifyQuery || stringifyQuery
   return (path || '/') + stringify(query) + hash
 }
 
-export function isSameRoute (a: Route, b: ?Route): boolean {
+export function isSameRoute (a: Route, b: ? Route): boolean {
   if (b === START) {
     return a === b
   } else if (!b) {
@@ -78,15 +84,15 @@ export function isSameRoute (a: Route, b: ?Route): boolean {
   } else if (a.path && b.path) {
     return (
       a.path.replace(trailingSlashRE, '') === b.path.replace(trailingSlashRE, '') &&
-      a.hash === b.hash &&
-      isObjectEqual(a.query, b.query)
+            a.hash === b.hash &&
+            isObjectEqual(a.query, b.query)
     )
   } else if (a.name && b.name) {
     return (
       a.name === b.name &&
-      a.hash === b.hash &&
-      isObjectEqual(a.query, b.query) &&
-      isObjectEqual(a.params, b.params)
+            a.hash === b.hash &&
+            isObjectEqual(a.query, b.query) &&
+            isObjectEqual(a.params, b.params)
     )
   } else {
     return false
@@ -117,8 +123,8 @@ export function isIncludedRoute (current: Route, target: Route): boolean {
     current.path.replace(trailingSlashRE, '/').indexOf(
       target.path.replace(trailingSlashRE, '/')
     ) === 0 &&
-    (!target.hash || current.hash === target.hash) &&
-    queryIncludes(current.query, target.query)
+        (!target.hash || current.hash === target.hash) &&
+        queryIncludes(current.query, target.query)
   )
 }
 

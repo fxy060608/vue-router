@@ -1,14 +1,27 @@
 /* @flow */
 
 import type Router from '../index'
-import { History } from './base'
-import { cleanPath } from '../util/path'
-import { getLocation } from './html5'
-import { setupScroll, handleScroll } from '../util/scroll'
-import { pushState, replaceState, supportsPushState } from '../util/push-state'
+import {
+  History
+} from './base'
+import {
+  cleanPath
+} from '../util/path'
+import {
+  getLocation
+} from './html5'
+import {
+  setupScroll,
+  handleScroll
+} from '../util/scroll'
+import {
+  pushState,
+  replaceState,
+  supportsPushState
+} from '../util/push-state'
 
 export class HashHistory extends History {
-  constructor (router: Router, base: ?string, fallback: boolean) {
+  constructor (router: Router, base: ? string, fallback: boolean) {
     super(router, base)
     // check history fallback deeplinking
     if (fallback && checkFallback(this.base)) {
@@ -44,8 +57,22 @@ export class HashHistory extends History {
     })
   }
 
-  push (location: RawLocation, onComplete?: Function, onAbort?: Function) {
-    const { current: fromRoute } = this
+  push (location: RawLocation, onComplete ?: Function, onAbort ?: Function) {
+    if (typeof location === 'object') { // fixed by xxxxxx
+      switch (location.type) {
+        case 'navigateTo':
+        case 'redirectTo':
+        case 'reLaunch':
+          this.router.id++
+          break
+        case 'switchTab':
+          break
+      }
+    }
+
+    const {
+      current: fromRoute
+    } = this
     this.transitionTo(location, route => {
       pushHash(route.fullPath)
       handleScroll(this.router, route, fromRoute, false)
@@ -53,8 +80,22 @@ export class HashHistory extends History {
     }, onAbort)
   }
 
-  replace (location: RawLocation, onComplete?: Function, onAbort?: Function) {
-    const { current: fromRoute } = this
+  replace (location: RawLocation, onComplete ?: Function, onAbort ?: Function) {
+    if (typeof location === 'object') { // fixed by xxxxxx
+      switch (location.type) {
+        case 'navigateTo':
+        case 'redirectTo':
+        case 'reLaunch':
+          this.router.id++
+          break
+        case 'switchTab':
+          break
+      }
+    }
+
+    const {
+      current: fromRoute
+    } = this
     this.transitionTo(location, route => {
       replaceHash(route.fullPath)
       handleScroll(this.router, route, fromRoute, false)
@@ -66,7 +107,7 @@ export class HashHistory extends History {
     window.history.go(n)
   }
 
-  ensureURL (push?: boolean) {
+  ensureURL (push ?: boolean) {
     const current = this.current.fullPath
     if (getHash() !== current) {
       push ? pushHash(current) : replaceHash(current)
@@ -74,7 +115,12 @@ export class HashHistory extends History {
   }
 
   getCurrentLocation () {
-    return getHash()
+    return {
+      path: getHash(),
+      query: {
+        __id__: ++this.router.id
+      }
+    }
   }
 }
 
