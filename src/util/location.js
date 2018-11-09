@@ -69,6 +69,7 @@ export function normalizeLocation (
   return {
     _normalized: true,
     type: next.type,
+    params: next.params || {},
     path,
     query,
     hash

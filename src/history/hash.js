@@ -15,6 +15,7 @@ import {
   handleScroll
 } from '../util/scroll'
 import {
+  getStateKey,
   pushState,
   replaceState,
   supportsPushState
@@ -41,17 +42,30 @@ export class HashHistory extends History {
       setupScroll()
     }
 
-    window.addEventListener(supportsPushState ? 'popstate' : 'hashchange', () => {
+    window.addEventListener(supportsPushState ? 'popstate' : 'hashchange', (e) => {
       const current = this.current
       if (!ensureSlash()) {
         return
       }
-      this.transitionTo(getHash(), route => {
+
+      // fixed by xxxxxx
+      let key = e.state && e.state.key
+      if (!key) {
+        // TODO
+        key = getStateKey()
+      }
+
+      this.transitionTo({
+        path: getHash(),
+        params: {
+          __id__: key
+        }
+      }, route => {
         if (supportsScroll) {
           handleScroll(this.router, route, current, true)
         }
         if (!supportsPushState) {
-          replaceHash(route.fullPath)
+          replaceHash(route.fullPath, route.params.__id__)
         }
       })
     })
@@ -68,13 +82,19 @@ export class HashHistory extends History {
         case 'switchTab':
           break
       }
+      location.params = location.params || {}
+      location.params.__id__ = this.router.id
     }
 
     const {
       current: fromRoute
     } = this
+
+    // fixed by xxxxxx
+    const key = this.router.id
+
     this.transitionTo(location, route => {
-      pushHash(route.fullPath)
+      pushHash(route.fullPath, key)
       handleScroll(this.router, route, fromRoute, false)
       onComplete && onComplete(route)
     }, onAbort)
@@ -91,13 +111,19 @@ export class HashHistory extends History {
         case 'switchTab':
           break
       }
+      location.params = location.params || {}
+      location.params.__id__ = this.router.id
     }
 
     const {
       current: fromRoute
     } = this
+
+    // fixed by xxxxxx
+    const key = this.router.id
+
     this.transitionTo(location, route => {
-      replaceHash(route.fullPath)
+      replaceHash(route.fullPath, key)
       handleScroll(this.router, route, fromRoute, false)
       onComplete && onComplete(route)
     }, onAbort)
@@ -110,14 +136,14 @@ export class HashHistory extends History {
   ensureURL (push ?: boolean) {
     const current = this.current.fullPath
     if (getHash() !== current) {
-      push ? pushHash(current) : replaceHash(current)
+      push ? pushHash(current, this.current.params.__id__) : replaceHash(current, this.current.params.__id__)
     }
   }
 
   getCurrentLocation () {
     return {
       path: getHash(),
-      query: {
+      params: {
         __id__: ++this.router.id
       }
     }
@@ -158,17 +184,17 @@ function getUrl (path) {
   return `${base}#${path}`
 }
 
-function pushHash (path) {
+function pushHash (path, key) {
   if (supportsPushState) {
-    pushState(getUrl(path))
+    pushState(getUrl(path), key)
   } else {
     window.location.hash = path
   }
 }
 
-function replaceHash (path) {
+function replaceHash (path, key) {
   if (supportsPushState) {
-    replaceState(getUrl(path))
+    replaceState(getUrl(path), key)
   } else {
     window.location.replace(getUrl(path))
   }

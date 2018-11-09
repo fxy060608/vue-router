@@ -180,10 +180,6 @@ function resolveQuery (
   for (var key in extraQuery) {
     parsedQuery[key] = extraQuery[key];
   }
-  // fixed by xxxxxx
-  if (parsedQuery.__id__) {
-    parsedQuery.__id__ = parseInt(parsedQuery.__id__);
-  }
   return parsedQuery
 }
 
@@ -1323,231 +1319,11 @@ function normalizeLocation (
   return {
     _normalized: true,
     type: next.type,
+    params: next.params || {},
     path: path,
     query: query,
     hash: hash
   }
-}
-
-/*  */
-
-
-
-function createMatcher (
-  routes,
-  router
-) {
-  var ref = createRouteMap(routes);
-  var pathList = ref.pathList;
-  var pathMap = ref.pathMap;
-  var nameMap = ref.nameMap;
-
-  function addRoutes (routes) {
-    createRouteMap(routes, pathList, pathMap, nameMap);
-  }
-
-  function match (
-    raw,
-    currentRoute ,
-    redirectedFrom 
-  ) {
-    var location = normalizeLocation(raw, currentRoute, false, router);
-    var name = location.name;
-
-    if (name) {
-      var record = nameMap[name];
-      {
-        warn(record, ("Route with name '" + name + "' does not exist"));
-      }
-      if (!record) { return _createRoute(null, location) }
-      var paramNames = record.regex.keys
-        .filter(function (key) { return !key.optional; })
-        .map(function (key) { return key.name; });
-
-      if (typeof location.params !== 'object') {
-        location.params = {};
-      }
-
-      if (currentRoute && typeof currentRoute.params === 'object') {
-        for (var key in currentRoute.params) {
-          if (!(key in location.params) && paramNames.indexOf(key) > -1) {
-            location.params[key] = currentRoute.params[key];
-          }
-        }
-      }
-
-      if (record) {
-        location.path = fillParams(record.path, location.params, ("named route \"" + name + "\""));
-        return _createRoute(record, location, redirectedFrom)
-      }
-    } else if (location.path) {
-      location.params = {};
-      for (var i = 0; i < pathList.length; i++) {
-        var path = pathList[i];
-        var record$1 = pathMap[path];
-        if (matchRoute(record$1.regex, location.path, location.params)) {
-          return _createRoute(record$1, location, redirectedFrom)
-        }
-      }
-    }
-    // no match
-    return _createRoute(null, location)
-  }
-
-  function redirect (
-    record,
-    location
-  ) {
-    var originalRedirect = record.redirect;
-    var redirect = typeof originalRedirect === 'function'
-      ? originalRedirect(createRoute(record, location, null, router))
-      : originalRedirect;
-
-    if (typeof redirect === 'string') {
-      redirect = {
-        path: redirect
-      };
-    }
-
-    if (!redirect || typeof redirect !== 'object') {
-      {
-        warn(
-          false, ("invalid redirect option: " + (JSON.stringify(redirect)))
-        );
-      }
-      return _createRoute(null, location)
-    }
-
-    var re = redirect;
-    var name = re.name;
-    var path = re.path;
-    var query = location.query;
-    var hash = location.hash;
-    var params = location.params;
-    query = re.hasOwnProperty('query') ? re.query : query;
-    hash = re.hasOwnProperty('hash') ? re.hash : hash;
-    params = re.hasOwnProperty('params') ? re.params : params;
-
-    if (name) {
-      // resolved named direct
-      var targetRecord = nameMap[name];
-      {
-        assert(targetRecord, ("redirect failed: named route \"" + name + "\" not found."));
-      }
-      return match({
-        _normalized: true,
-        name: name,
-        query: query,
-        hash: hash,
-        params: params
-      }, undefined, location)
-    } else if (path) {
-      // 1. resolve relative redirect
-      var rawPath = resolveRecordPath(path, record);
-      // 2. resolve params
-      var resolvedPath = fillParams(rawPath, params, ("redirect route with path \"" + rawPath + "\""));
-      // 3. rematch with existing query and hash
-      return match({
-        _normalized: true,
-        path: resolvedPath,
-        query: query,
-        hash: hash
-      }, undefined, location)
-    } else {
-      {
-        warn(false, ("invalid redirect option: " + (JSON.stringify(redirect))));
-      }
-      return _createRoute(null, location)
-    }
-  }
-
-  function alias (
-    record,
-    location,
-    matchAs
-  ) {
-    var aliasedPath = fillParams(matchAs, location.params, ("aliased route with path \"" + matchAs + "\""));
-    var aliasedMatch = match({
-      _normalized: true,
-      path: aliasedPath
-    });
-    if (aliasedMatch) {
-      var matched = aliasedMatch.matched;
-      var aliasedRecord = matched[matched.length - 1];
-      location.params = aliasedMatch.params;
-      return _createRoute(aliasedRecord, location)
-    }
-    return _createRoute(null, location)
-  }
-
-  function _createRoute (
-    record,
-    location,
-    redirectedFrom 
-  ) {
-    if (record && record.redirect) {
-      return redirect(record, redirectedFrom || location)
-    }
-    if (record && record.matchAs) {
-      return alias(record, location, record.matchAs)
-    }
-    // fixed by xxxxxx
-    location.query = location.query || {};
-    if (record && record.meta && record.meta.id) {
-      location.query.__id__ = record.meta.id;
-    } else if (!location.query.__id__) {
-      location.query.__id__ = router.id;
-    }
-    if (record && record.meta && record.meta.name) {
-      if (record.meta.id) {
-        record.components.default.name = record.meta.name + '-' + location.query.__id__;
-      } else {
-        record = Object.assign({}, record);
-        record.components = {
-          'default': {
-            name: record.meta.name + '-' + location.query.__id__,
-            render: record.components['default'].render,
-            beforeRouteEnter: record.beforeRouteEnter
-          }
-        };
-      }
-    }
-    return createRoute(record, location, redirectedFrom, router)
-  }
-
-  return {
-    match: match,
-    addRoutes: addRoutes
-  }
-}
-
-function matchRoute (
-  regex,
-  path,
-  params
-) {
-  var m = path.match(regex);
-
-  if (!m) {
-    return false
-  } else if (!params) {
-    return true
-  }
-
-  for (var i = 1, len = m.length; i < len; ++i) {
-    var key = regex.keys[i - 1];
-    var val = typeof m[i] === 'string' ? decodeURIComponent(m[i]) : m[i];
-    if (key) {
-      // Fix #1994: using * with props: true generates a param named 0
-      params[key.name || 'pathMatch'] = val;
-    }
-  }
-
-  return true
-}
-
-function resolveRecordPath (path, record) {
-  return resolvePath(path, record.parent ? record.parent.path : '/', true)
 }
 
 /*  */
@@ -1684,9 +1460,9 @@ var supportsPushState = inBrowser && (function () {
 
   if (
     (ua.indexOf('Android 2.') !== -1 || ua.indexOf('Android 4.0') !== -1) &&
-    ua.indexOf('Mobile Safari') !== -1 &&
-    ua.indexOf('Chrome') === -1 &&
-    ua.indexOf('Windows Phone') === -1
+		ua.indexOf('Mobile Safari') !== -1 &&
+		ua.indexOf('Chrome') === -1 &&
+		ua.indexOf('Windows Phone') === -1
   ) {
     return false
   }
@@ -1695,16 +1471,16 @@ var supportsPushState = inBrowser && (function () {
 })();
 
 // use User Timing api (if present) for more accurate key precision
-var Time = inBrowser && window.performance && window.performance.now
-  ? window.performance
-  : Date;
+// const Time = inBrowser && window.performance && window.performance.now
+//   ? window.performance
+//   : Date
 
-var _key = genKey();
-
-function genKey () {
-  return Time.now().toFixed(3)
-}
-
+var _key = 0;
+//
+// function genKey (): string {
+//   return Time.now().toFixed(3)
+// }
+//
 function getStateKey () {
   return _key
 }
@@ -1713,25 +1489,251 @@ function setStateKey (key) {
   _key = key;
 }
 
-function pushState (url, replace) {
+function pushState (url , _key , replace ) {
+  setStateKey(_key);
   saveScrollPosition();
   // try...catch the pushState call to get around Safari
   // DOM Exception 18 where it limits to 100 pushState calls
   var history = window.history;
   try {
     if (replace) {
-      history.replaceState({ key: _key }, '', url);
+      history.replaceState({
+        key: _key
+      }, '', url);
     } else {
-      _key = genKey();
-      history.pushState({ key: _key }, '', url);
+      // _key = genKey()
+      history.pushState({
+        key: _key
+      }, '', url);
     }
   } catch (e) {
     window.location[replace ? 'replace' : 'assign'](url);
   }
 }
 
-function replaceState (url) {
-  pushState(url, true);
+function replaceState (url , _key ) {
+  pushState(url, _key, true);
+}
+
+/*  */
+
+
+
+function createMatcher (
+  routes,
+  router
+) {
+  var ref = createRouteMap(routes);
+  var pathList = ref.pathList;
+  var pathMap = ref.pathMap;
+  var nameMap = ref.nameMap;
+
+  function addRoutes (routes) {
+    createRouteMap(routes, pathList, pathMap, nameMap);
+  }
+
+  function match (
+    raw,
+    currentRoute ,
+    redirectedFrom 
+  ) {
+    var location = normalizeLocation(raw, currentRoute, false, router);
+    var name = location.name;
+
+    if (name) {
+      var record = nameMap[name];
+      {
+        warn(record, ("Route with name '" + name + "' does not exist"));
+      }
+      if (!record) { return _createRoute(null, location) }
+      var paramNames = record.regex.keys
+        .filter(function (key) { return !key.optional; })
+        .map(function (key) { return key.name; });
+
+      if (typeof location.params !== 'object') {
+        location.params = {};
+      }
+
+      if (currentRoute && typeof currentRoute.params === 'object') {
+        for (var key in currentRoute.params) {
+          if (!(key in location.params) && paramNames.indexOf(key) > -1) {
+            location.params[key] = currentRoute.params[key];
+          }
+        }
+      }
+
+      if (record) {
+        location.path = fillParams(record.path, location.params, ("named route \"" + name + "\""));
+        return _createRoute(record, location, redirectedFrom)
+      }
+    } else if (location.path) {
+      location.params = location.params || {}; // fixed by xxxxxx
+      for (var i = 0; i < pathList.length; i++) {
+        var path = pathList[i];
+        var record$1 = pathMap[path];
+        if (matchRoute(record$1.regex, location.path, location.params)) {
+          return _createRoute(record$1, location, redirectedFrom)
+        }
+      }
+    }
+    // no match
+    return _createRoute(null, location)
+  }
+
+  function redirect (
+    record,
+    location
+  ) {
+    var originalRedirect = record.redirect;
+    var redirect = typeof originalRedirect === 'function'
+      ? originalRedirect(createRoute(record, location, null, router))
+      : originalRedirect;
+
+    if (typeof redirect === 'string') {
+      redirect = {
+        path: redirect
+      };
+    }
+
+    if (!redirect || typeof redirect !== 'object') {
+      {
+        warn(
+          false, ("invalid redirect option: " + (JSON.stringify(redirect)))
+        );
+      }
+      return _createRoute(null, location)
+    }
+
+    var re = redirect;
+    var name = re.name;
+    var path = re.path;
+    var query = location.query;
+    var hash = location.hash;
+    var params = location.params;
+    query = re.hasOwnProperty('query') ? re.query : query;
+    hash = re.hasOwnProperty('hash') ? re.hash : hash;
+    params = re.hasOwnProperty('params') ? re.params : params;
+
+    if (name) {
+      // resolved named direct
+      var targetRecord = nameMap[name];
+      {
+        assert(targetRecord, ("redirect failed: named route \"" + name + "\" not found."));
+      }
+      return match({
+        _normalized: true,
+        name: name,
+        query: query,
+        hash: hash,
+        params: params
+      }, undefined, location)
+    } else if (path) {
+      // 1. resolve relative redirect
+      var rawPath = resolveRecordPath(path, record);
+      // 2. resolve params
+      var resolvedPath = fillParams(rawPath, params, ("redirect route with path \"" + rawPath + "\""));
+      // 3. rematch with existing query and hash
+      return match({
+        _normalized: true,
+        path: resolvedPath,
+        query: query,
+        hash: hash
+      }, undefined, location)
+    } else {
+      {
+        warn(false, ("invalid redirect option: " + (JSON.stringify(redirect))));
+      }
+      return _createRoute(null, location)
+    }
+  }
+
+  function alias (
+    record,
+    location,
+    matchAs
+  ) {
+    var aliasedPath = fillParams(matchAs, location.params, ("aliased route with path \"" + matchAs + "\""));
+    var aliasedMatch = match({
+      _normalized: true,
+      path: aliasedPath
+    });
+    if (aliasedMatch) {
+      var matched = aliasedMatch.matched;
+      var aliasedRecord = matched[matched.length - 1];
+      location.params = aliasedMatch.params;
+      return _createRoute(aliasedRecord, location)
+    }
+    return _createRoute(null, location)
+  }
+
+  function _createRoute (
+    record,
+    location,
+    redirectedFrom 
+  ) {
+    if (record && record.redirect) {
+      return redirect(record, redirectedFrom || location)
+    }
+    if (record && record.matchAs) {
+      return alias(record, location, record.matchAs)
+    }
+    // fixed by xxxxxx
+    location.params = location.params || {};
+    if (record && record.meta && record.meta.id) {
+      location.params.__id__ = record.meta.id;
+    } else if (!location.params.__id__) {
+      location.params.__id__ = router.id;
+    }
+    if (record && record.meta && record.meta.name) {
+      setStateKey(location.params.__id__);
+      if (record.meta.id) {
+        record.components.default.name = record.meta.name + '-' + location.params.__id__;
+      } else {
+        record = Object.assign({}, record);
+        record.components = {
+          'default': {
+            name: record.meta.name + '-' + location.params.__id__,
+            render: record.components['default'].render
+          }
+        };
+      }
+    }
+    return createRoute(record, location, redirectedFrom, router)
+  }
+
+  return {
+    match: match,
+    addRoutes: addRoutes
+  }
+}
+
+function matchRoute (
+  regex,
+  path,
+  params
+) {
+  var m = path.match(regex);
+
+  if (!m) {
+    return false
+  } else if (!params) {
+    return true
+  }
+
+  for (var i = 1, len = m.length; i < len; ++i) {
+    var key = regex.keys[i - 1];
+    var val = typeof m[i] === 'string' ? decodeURIComponent(m[i]) : m[i];
+    if (key) {
+      // Fix #1994: using * with props: true generates a param named 0
+      params[key.name || 'pathMatch'] = val;
+    }
+  }
+
+  return true
+}
+
+function resolveRecordPath (path, record) {
+  return resolvePath(path, record.parent ? record.parent.path : '/', true)
 }
 
 /*  */
@@ -2174,118 +2176,146 @@ function poll (
 /*  */
 
 var HTML5History = (function (History$$1) {
-	function HTML5History(router, base) {
-		var this$1 = this;
+  function HTML5History () {
+    History$$1.apply(this, arguments);
+  }
 
-		History$$1.call(this, router, base);
+  if ( History$$1 ) HTML5History.__proto__ = History$$1;
+  HTML5History.prototype = Object.create( History$$1 && History$$1.prototype );
+  HTML5History.prototype.constructor = HTML5History;
 
-		var expectScroll = router.options.scrollBehavior;
-		var supportsScroll = supportsPushState && expectScroll;
+  HTML5History.prototype.setupListeners = function setupListeners () {
+    var this$1 = this;
 
-		if (supportsScroll) {
-			setupScroll();
-		}
+    var router = this.router;
+    var expectScroll = router.options.scrollBehavior;
+    var supportsScroll = supportsPushState && expectScroll;
 
-		var initLocation = getLocation(this.base);
-		window.addEventListener('popstate', function (e) {
-			var current = this$1.current;
+    if (supportsScroll) {
+      setupScroll();
+    }
 
-			// Avoiding first `popstate` event dispatched in some browsers but first
-			// history route not updated since async guard at the same time.
-			var location = getLocation(this$1.base);
-			if (this$1.current === START && location === initLocation) {
-				return
-			}
+    var initLocation = getLocation(this.base);
+    window.addEventListener('popstate', function (e) {
+      var current = this$1.current;
 
-			this$1.transitionTo(location, function (route) {
-				if (supportsScroll) {
-					handleScroll(router, route, current, true);
-				}
-			});
-		});
-	}
+      // Avoiding first `popstate` event dispatched in some browsers but first
+      // history route not updated since async guard at the same time.
+      var location = getLocation(this$1.base);
+      if (this$1.current === START && location === initLocation) {
+        return
+      }
 
-	if ( History$$1 ) HTML5History.__proto__ = History$$1;
-	HTML5History.prototype = Object.create( History$$1 && History$$1.prototype );
-	HTML5History.prototype.constructor = HTML5History;
+      // fixed by xxxxxx
+      var key = e.state && e.state.key;
+      if (!key) {
+        // TODO
+        key = getStateKey();
+      }
 
-	HTML5History.prototype.go = function go (n) {
-		window.history.go(n);
-	};
+      this$1.transitionTo({ // fixed by xxxxxx
+        path: location,
+        params: {
+          __id__: key
+        }
+      }, function (route) {
+        if (supportsScroll) {
+          handleScroll(router, route, current, true);
+        }
+      });
+    });
+  };
 
-	HTML5History.prototype.push = function push (location, onComplete  , onAbort  ) {
-		var this$1 = this;
+  HTML5History.prototype.go = function go (n) {
+    window.history.go(n);
+  };
 
-		if (typeof location === 'object') { // fixed by xxxxxx
-			switch (location.type) {
-				case 'navigateTo':
-				case 'redirectTo':
-				case 'reLaunch':
-					this.router.id++;
-					break
-				case 'switchTab':
-					break
-			}
-		}
+  HTML5History.prototype.push = function push (location, onComplete , onAbort ) {
+    var this$1 = this;
 
-		var ref = this;
-		var fromRoute = ref.current;
-		this.transitionTo(location, function (route) {
-			pushState(cleanPath(this$1.base + route.fullPath));
-			handleScroll(this$1.router, route, fromRoute, false);
-			onComplete && onComplete(route);
-		}, onAbort);
-	};
+    if (typeof location === 'object') { // fixed by xxxxxx
+      switch (location.type) {
+        case 'navigateTo':
+        case 'redirectTo':
+        case 'reLaunch':
+          this.router.id++;
+          break
+        case 'switchTab':
+          break
+      }
+      location.params = location.params || {};
+      location.params.__id__ = this.router.id;
+    }
 
-	HTML5History.prototype.replace = function replace (location, onComplete  , onAbort  ) {
-		var this$1 = this;
+    var ref = this;
+    var fromRoute = ref.current;
 
-		if (typeof location === 'object') { // fixed by xxxxxx
-			switch (location.type) {
-				case 'navigateTo':
-				case 'redirectTo':
-				case 'reLaunch':
-					this.router.id++;
-					break
-				case 'switchTab':
-					break
-			}
-		}
+    this.transitionTo(location, function (route) {
+      pushState(cleanPath(this$1.base + route.fullPath), location.params.__id__); // fixed by xxxxxx
+      handleScroll(this$1.router, route, fromRoute, false);
+      onComplete && onComplete(route);
+    }, onAbort);
+  };
 
-		var ref = this;
-		var fromRoute = ref.current;
-		this.transitionTo(location, function (route) {
-			replaceState(cleanPath(this$1.base + route.fullPath));
-			handleScroll(this$1.router, route, fromRoute, false);
-			onComplete && onComplete(route);
-		}, onAbort);
-	};
+  HTML5History.prototype.replace = function replace (location, onComplete , onAbort ) {
+    var this$1 = this;
 
-	HTML5History.prototype.ensureURL = function ensureURL (push  ) {
-		if (getLocation(this.base) !== this.current.fullPath) {
-			var current = cleanPath(this.base + this.current.fullPath);
-			push ? pushState(current) : replaceState(current);
-		}
-	};
+    if (typeof location === 'object') { // fixed by xxxxxx
+      switch (location.type) {
+        case 'navigateTo':
+        case 'redirectTo':
+        case 'reLaunch':
+          this.router.id++;
+          break
+        case 'switchTab':
+          break
+      }
+      location.params = location.params || {};
+      location.params.__id__ = this.router.id;
+    }
 
-	HTML5History.prototype.getCurrentLocation = function getCurrentLocation () {
-		return {
-			path: getLocation(this.base),
-			query: {
-				__id__: ++this.router.id
-			}
-		}
-	};
+    var ref = this;
+    var fromRoute = ref.current;
 
-	return HTML5History;
+    this.transitionTo(location, function (route) {
+      replaceState(cleanPath(this$1.base + route.fullPath), location.params.__id__); // fixed by xxxxxx
+      handleScroll(this$1.router, route, fromRoute, false);
+      onComplete && onComplete(route);
+    }, onAbort);
+  };
+
+  HTML5History.prototype.ensureURL = function ensureURL (push ) {
+    if (getLocation(this.base) !== this.current.fullPath) {
+      var current = cleanPath(this.base + this.current.fullPath);
+      // fixed by xxxxxx
+      var location = {
+        path: current,
+        params: {
+          __id__: this.current.params.__id__
+        }
+      };
+      push ? pushState(location, location.params.__id__) : replaceState(location, location.params.__id__);
+    }
+  };
+
+  HTML5History.prototype.getCurrentLocation = function getCurrentLocation () {
+    return {
+      path: getLocation(this.base),
+      params: { // fixed by xxxxxx
+        __id__: ++this.router.id
+      }
+    }
+  };
+
+  return HTML5History;
 }(History));
 
-function getLocation(base) {
-	var path = decodeURI(window.location.pathname);
-	if (base && path.indexOf(base) === 0) {
-		path = path.slice(base.length);
-	}
-	return (path || '/') + window.location.search + window.location.hash
+function getLocation (base) {
+  var path = decodeURI(window.location.pathname);
+  if (base && path.indexOf(base) === 0) {
+    path = path.slice(base.length);
+  }
+  return (path || '/') + window.location.search + window.location.hash
 }
 
 /*  */
@@ -2317,17 +2347,30 @@ var HashHistory = (function (History$$1) {
       setupScroll();
     }
 
-    window.addEventListener(supportsPushState ? 'popstate' : 'hashchange', function () {
+    window.addEventListener(supportsPushState ? 'popstate' : 'hashchange', function (e) {
       var current = this$1.current;
       if (!ensureSlash()) {
         return
       }
-      this$1.transitionTo(getHash(), function (route) {
+
+      // fixed by xxxxxx
+      var key = e.state && e.state.key;
+      if (!key) {
+        // TODO
+        key = getStateKey();
+      }
+
+      this$1.transitionTo({
+        path: getHash(),
+        params: {
+          __id__: key
+        }
+      }, function (route) {
         if (supportsScroll) {
           handleScroll(this$1.router, route, current, true);
         }
         if (!supportsPushState) {
-          replaceHash(route.fullPath);
+          replaceHash(route.fullPath, route.params.__id__);
         }
       });
     });
@@ -2346,12 +2389,18 @@ var HashHistory = (function (History$$1) {
         case 'switchTab':
           break
       }
+      location.params = location.params || {};
+      location.params.__id__ = this.router.id;
     }
 
     var ref = this;
     var fromRoute = ref.current;
+
+    // fixed by xxxxxx
+    var key = this.router.id;
+
     this.transitionTo(location, function (route) {
-      pushHash(route.fullPath);
+      pushHash(route.fullPath, key);
       handleScroll(this$1.router, route, fromRoute, false);
       onComplete && onComplete(route);
     }, onAbort);
@@ -2370,12 +2419,18 @@ var HashHistory = (function (History$$1) {
         case 'switchTab':
           break
       }
+      location.params = location.params || {};
+      location.params.__id__ = this.router.id;
     }
 
     var ref = this;
     var fromRoute = ref.current;
+
+    // fixed by xxxxxx
+    var key = this.router.id;
+
     this.transitionTo(location, function (route) {
-      replaceHash(route.fullPath);
+      replaceHash(route.fullPath, key);
       handleScroll(this$1.router, route, fromRoute, false);
       onComplete && onComplete(route);
     }, onAbort);
@@ -2388,14 +2443,14 @@ var HashHistory = (function (History$$1) {
   HashHistory.prototype.ensureURL = function ensureURL (push ) {
     var current = this.current.fullPath;
     if (getHash() !== current) {
-      push ? pushHash(current) : replaceHash(current);
+      push ? pushHash(current, this.current.params.__id__) : replaceHash(current, this.current.params.__id__);
     }
   };
 
   HashHistory.prototype.getCurrentLocation = function getCurrentLocation () {
     return {
       path: getHash(),
-      query: {
+      params: {
         __id__: ++this.router.id
       }
     }
@@ -2438,17 +2493,17 @@ function getUrl (path) {
   return (base + "#" + path)
 }
 
-function pushHash (path) {
+function pushHash (path, key) {
   if (supportsPushState) {
-    pushState(getUrl(path));
+    pushState(getUrl(path), key);
   } else {
     window.location.hash = path;
   }
 }
 
-function replaceHash (path) {
+function replaceHash (path, key) {
   if (supportsPushState) {
-    replaceState(getUrl(path));
+    replaceState(getUrl(path), key);
   } else {
     window.location.replace(getUrl(path));
   }
@@ -2592,7 +2647,16 @@ var prototypeAccessors = { currentRoute: { configurable: true } };
     var history = this.history;
 
     if (history instanceof HTML5History) {
-      history.transitionTo(history.getCurrentLocation());
+      // fixed by xxxxxx
+      var setupHistoryListener = function () {
+        history.setupListeners();
+      };
+      history.transitionTo(
+        history.getCurrentLocation(),
+        setupHistoryListener,
+        setupHistoryListener
+      );
+      // history.transitionTo(history.getCurrentLocation())
     } else if (history instanceof HashHistory) {
       var setupHashListener = function () {
         history.setupListeners();

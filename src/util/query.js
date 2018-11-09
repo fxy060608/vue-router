@@ -33,10 +33,6 @@ export function resolveQuery (
   for (const key in extraQuery) {
     parsedQuery[key] = extraQuery[key]
   }
-  // fixed by xxxxxx
-  if (parsedQuery.__id__) {
-    parsedQuery.__id__ = parseInt(parsedQuery.__id__)
-  }
   return parsedQuery
 }
 

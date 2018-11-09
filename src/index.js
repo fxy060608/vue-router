@@ -127,7 +127,16 @@ export default class VueRouter {
       const history = this.history
 
       if (history instanceof HTML5History) {
-        history.transitionTo(history.getCurrentLocation())
+        // fixed by xxxxxx
+        const setupHistoryListener = () => {
+          history.setupListeners()
+        }
+        history.transitionTo(
+          history.getCurrentLocation(),
+          setupHistoryListener,
+          setupHistoryListener
+        )
+        // history.transitionTo(history.getCurrentLocation())
       } else if (history instanceof HashHistory) {
         const setupHashListener = () => {
           history.setupListeners()

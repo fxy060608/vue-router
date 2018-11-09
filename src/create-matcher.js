@@ -21,9 +21,13 @@ import {
   normalizeLocation
 } from './util/location'
 
+import {
+  setStateKey
+} from './util/push-state'
+
 export type Matcher = {
-    match: (raw: RawLocation, current ?: Route, redirectedFrom ?: Location) => Route;
-    addRoutes: (routes: Array<RouteConfig>) => void;
+	match: (raw: RawLocation, current ?: Route, redirectedFrom ?: Location) => Route;
+	addRoutes: (routes: Array<RouteConfig>) => void;
 };
 
 export function createMatcher (
@@ -77,7 +81,7 @@ export function createMatcher (
         return _createRoute(record, location, redirectedFrom)
       }
     } else if (location.path) {
-      location.params = {}
+      location.params = location.params || {} // fixed by xxxxxx
       for (let i = 0; i < pathList.length; i++) {
         const path = pathList[i]
         const record = pathMap[path]
@@ -192,22 +196,22 @@ export function createMatcher (
       return alias(record, location, record.matchAs)
     }
     // fixed by xxxxxx
-    location.query = location.query || {}
+    location.params = location.params || {}
     if (record && record.meta && record.meta.id) {
-      location.query.__id__ = record.meta.id
-    } else if (!location.query.__id__) {
-      location.query.__id__ = router.id
+      location.params.__id__ = record.meta.id
+    } else if (!location.params.__id__) {
+      location.params.__id__ = router.id
     }
     if (record && record.meta && record.meta.name) {
+      setStateKey(location.params.__id__)
       if (record.meta.id) {
-        record.components.default.name = record.meta.name + '-' + location.query.__id__
+        record.components.default.name = record.meta.name + '-' + location.params.__id__
       } else {
         record = Object.assign({}, record)
         record.components = {
           'default': {
-            name: record.meta.name + '-' + location.query.__id__,
-            render: record.components['default'].render,
-            beforeRouteEnter: record.beforeRouteEnter
+            name: record.meta.name + '-' + location.params.__id__,
+            render: record.components['default'].render
           }
         }
       }
