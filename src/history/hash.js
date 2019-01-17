@@ -39,7 +39,7 @@ export class HashHistory extends History {
     const supportsScroll = supportsPushState && expectScroll
 
     if (supportsScroll) {
-      setupScroll()
+      setupScroll(router)
     }
 
     window.addEventListener(supportsPushState ? 'popstate' : 'hashchange', (e) => {
@@ -49,16 +49,16 @@ export class HashHistory extends History {
       }
 
       // fixed by xxxxxx
-      let key = e.state && e.state.key
-      if (!key) {
+      let id = e.state && e.state.id
+      if (!id) {
         // TODO
-        key = getStateKey()
+        id = router.id
       }
 
       this.transitionTo({
         path: getHash(),
         params: {
-          __id__: key
+          __id__: id
         }
       }, route => {
         if (supportsScroll) {

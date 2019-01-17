@@ -34,7 +34,7 @@ export class HTML5History extends History {
     const supportsScroll = supportsPushState && expectScroll
 
     if (supportsScroll) {
-      setupScroll()
+      setupScroll(router)
     }
 
     const initLocation = getLocation(this.base)
@@ -49,16 +49,16 @@ export class HTML5History extends History {
       }
 
       // fixed by xxxxxx
-      let key = e.state && e.state.key
-      if (!key) {
+      let id = e.state && e.state.id
+      if (!id) {
         // TODO
-        key = getStateKey()
+        id = router.id
       }
 
       this.transitionTo({ // fixed by xxxxxx
         path: location,
         params: {
-          __id__: key
+          __id__: id
         }
       }, route => {
         if (supportsScroll) {

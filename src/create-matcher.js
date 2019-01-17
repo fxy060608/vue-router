@@ -21,10 +21,6 @@ import {
   normalizeLocation
 } from './util/location'
 
-import {
-  setStateKey
-} from './util/push-state'
-
 export type Matcher = {
 	match: (raw: RawLocation, current ?: Route, redirectedFrom ?: Location) => Route;
 	addRoutes: (routes: Array<RouteConfig>) => void;
@@ -203,7 +199,6 @@ export function createMatcher (
       location.params.__id__ = router.id
     }
     if (record && record.meta && record.meta.name) {
-      setStateKey(location.params.__id__)
       if (record.meta.id) {
         record.components.default.name = record.meta.name + '-' + location.params.__id__
       } else {
