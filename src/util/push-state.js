@@ -1,25 +1,25 @@
 /* @flow */
 
 import {
-	inBrowser
+  inBrowser
 } from './dom'
 import {
-	saveScrollPosition
+  saveScrollPosition
 } from './scroll'
 
-export const supportsPushState = inBrowser && (function() {
-	const ua = window.navigator.userAgent
+export const supportsPushState = inBrowser && (function () {
+  const ua = window.navigator.userAgent
 
-	if (
-		(ua.indexOf('Android 2.') !== -1 || ua.indexOf('Android 4.0') !== -1) &&
+  if (
+    (ua.indexOf('Android 2.') !== -1 || ua.indexOf('Android 4.0') !== -1) &&
 		ua.indexOf('Mobile Safari') !== -1 &&
 		ua.indexOf('Chrome') === -1 &&
 		ua.indexOf('Windows Phone') === -1
-	) {
-		return false
-	}
+  ) {
+    return false
+  }
 
-	return window.history && 'pushState' in window.history
+  return window.history && 'pushState' in window.history
 })()
 
 // use User Timing api (if present) for more accurate key precision
@@ -33,37 +33,37 @@ function genKey (): string {
   return Time.now().toFixed(3)
 }
 
-export function getStateKey() {
-	return _key
+export function getStateKey () {
+  return _key
 }
 
-export function setStateKey(key: number) {
-	_key = key
+export function setStateKey (key: number) {
+  _key = key
 }
 
-export function pushState(url ? : string, id ? : number, replace ? : boolean) {
-	saveScrollPosition()
-	// try...catch the pushState call to get around Safari
-	// DOM Exception 18 where it limits to 100 pushState calls
-	const history = window.history
-	try {
-		if (replace) {
-			history.replaceState({
+export function pushState (url ?: string, id ?: number, replace ?: boolean) {
+  saveScrollPosition()
+  // try...catch the pushState call to get around Safari
+  // DOM Exception 18 where it limits to 100 pushState calls
+  const history = window.history
+  try {
+    if (replace) {
+      history.replaceState({
         id,
-				key: _key
-			}, '', url)
-		} else {
-			_key = genKey()
-			history.pushState({
+        key: _key
+      }, '', url)
+    } else {
+      _key = genKey()
+      history.pushState({
         id,
-				key: _key
-			}, '', url)
-		}
-	} catch (e) {
-		window.location[replace ? 'replace' : 'assign'](url)
-	}
+        key: _key
+      }, '', url)
+    }
+  } catch (e) {
+    window.location[replace ? 'replace' : 'assign'](url)
+  }
 }
 
-export function replaceState(url ? : string, id ? : number) {
-	pushState(url, id, true)
+export function replaceState (url ?: string, id ?: number) {
+  pushState(url, id, true)
 }

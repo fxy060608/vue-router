@@ -15,7 +15,7 @@ import {
   handleScroll
 } from '../util/scroll'
 import {
-  getStateKey,
+  // getStateKey,
   pushState,
   replaceState,
   supportsPushState
