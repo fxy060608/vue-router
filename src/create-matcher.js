@@ -20,7 +20,9 @@ import {
 import {
   normalizeLocation
 } from './util/location'
-
+import {
+  extend
+} from './util/misc'
 export type Matcher = {
 	match: (raw: RawLocation, current ?: Route, redirectedFrom ?: Location) => Route;
 	addRoutes: (routes: Array<RouteConfig>) => void;
@@ -202,7 +204,7 @@ export function createMatcher (
       if (record.meta.id) {
         record.components.default.name = record.meta.name + '-' + location.params.__id__
       } else {
-        record = Object.assign({}, record)
+        record = extend({}, record)
         record.components = {
           'default': {
             name: record.meta.name + '-' + location.params.__id__,
