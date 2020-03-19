@@ -20,6 +20,10 @@ import {
   replaceState,
   supportsPushState
 } from '../util/push-state'
+import {
+  resolveQuery,
+  stringifyQuery
+} from '../util/query'
 
 export class HTML5History extends History {
   //   constructor (router: Router, base: ? string) {
@@ -153,5 +157,5 @@ export function getLocation (base: string): string {
   if (base && path.indexOf(base) === 0) {
     path = path.slice(base.length)
   }
-  return (path || '/') + window.location.search + window.location.hash
+  return (path || '/') + stringifyQuery(resolveQuery(window.location.search)) + window.location.hash
 }
