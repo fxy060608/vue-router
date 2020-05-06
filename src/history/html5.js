@@ -132,13 +132,8 @@ export class HTML5History extends History {
     if (getLocation(this.base) !== this.current.fullPath) {
       const current = cleanPath(this.base + this.current.fullPath)
       // fixed by xxxxxx
-      const location = {
-        path: current,
-        params: {
-          __id__: this.current.params.__id__
-        }
-      }
-      push ? pushState(location, location.params.__id__) : replaceState(location, location.params.__id__)
+      const id = this.current.params.__id__
+      push ? pushState(current, id) : replaceState(current, id)
     }
   }
 
