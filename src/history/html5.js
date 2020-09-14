@@ -78,8 +78,14 @@ export class HTML5History extends History {
 
   push (location: RawLocation, onComplete ?: Function, onAbort ?: Function) {
     if (typeof location === 'object') { // fixed by xxxxxx
+      location.params = location.params || {}
+      const hasId = location.params.__id__
       switch (location.type) {
         case 'navigateTo':
+          if (!hasId) {
+            this.router.id++
+          }
+          break
         case 'redirectTo':
         case 'reLaunch':
           this.router.id++
@@ -87,8 +93,9 @@ export class HTML5History extends History {
         case 'switchTab':
           break
       }
-      location.params = location.params || {}
-      location.params.__id__ = this.router.id
+      if (!hasId) {
+        location.params.__id__ = this.router.id
+      }
     }
 
     const {
