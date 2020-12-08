@@ -51,8 +51,9 @@ export class HashHistory extends History {
       // fixed by xxxxxx
       let id = e.state && e.state.id
       if (!id) {
-        // TODO
-        id = router.id
+        // 当手动切换页面时，强制刷新
+        return window.location.reload()
+        // id = router.id
       }
 
       this.transitionTo({
